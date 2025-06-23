@@ -26,7 +26,7 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
   const importSource = options.importSource || 'react-router-dom';
 
   return {
-    name: 'vite-react-file-router',
+    name: 'react-router-file',
 
     configResolved(resolvedConfig) {
       viteConfig = resolvedConfig;
