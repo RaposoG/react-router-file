@@ -3,29 +3,45 @@
 [![npm version](https://badge.fury.io/js/react-router-file.svg)](https://badge.fury.io/js/react-router-file)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A zero-config file system router for Vite + React applications that brings Next.js-like routing experience. Create files in your `src/pages` directory and get automatic route generation with code splitting!
+A zero-config file system router for Vite + React that brings a Next.js-like routing experience. Automatically generates routes with code-splitting from your file structure.
 
 ## Features
 
-* 🚀 **Zero Configuration** - Just add pages and routes are created automatically
-* 📁 **File System Based** - Your file structure becomes your routing structure
-* 🔄 **Dynamic Routes** - Support for `[param]` and catch-all `[...slug]` routes
-* 🎯 **Index Routes** - Automatically maps `index.tsx` files to directory roots
-* ⚡ **Automatic Code Splitting** - Every page is lazy-loaded for optimal performance
-* 🔌 **Vite Plugin** - Seamless integration with Vite's development server
-* 🎨 **Next.js-like API** - Familiar `<Link>` component and `useRouter` hook
+* 🚀 **Zero Configuration** - Just add pages and routes are created automatically.
+* 📁 **File System Based** - Your file structure becomes your routing structure.
+* 🔄 **Dynamic Routes** - Support for `[param]` and catch-all `[...slug]` routes.
+* 🎯 **Index Routes** - Automatically maps `index.tsx` files to directory roots.
+* ⚡ **Automatic Code Splitting** - Every page is lazy-loaded for optimal performance.
+* 🔌 **Vite Plugin** - Seamless integration with Vite's development server.
+* 🌐 **Environment Agnostic** - Works for web apps (`react-router-dom`) and desktop/native (`react-router`).
+* 🎨 **Next.js-like API** - Familiar `<Link>` component and `useRouter` hook.
 
 ## Installation
 
+The library requires `react` and `react-router` as core peer dependencies. For web projects, you will also need `react-router-dom`.
+
 ```bash
-npm install react-router-file react-router-dom
+# For standard web projects
+npm install react-router-file react-router react-router-dom
+
+# For non-browser environments (like Tauri), react-router-dom is still
+# recommended for the <MemoryRouter>, but is technically optional.
+npm install react-router-file react-router react-router-dom
 ```
 
 ## Setup
 
-1. **Add the Plugin to Your Vite Config**
+The setup depends on your target environment.
 
-```ts
+### For Web Applications (Default)
+
+This is the standard setup for websites and web apps.
+
+1. **Configure Vite Plugin (vite.config.ts)**
+
+No special options are needed. The plugin defaults to using react-router-dom.
+
+```typescript
 // vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -34,19 +50,20 @@ import fileRouter from 'react-router-file';
 export default defineConfig({
   plugins: [
     react(),
-    fileRouter({
-      // Optional: customize the pages directory
-      pagesDir: 'src/pages',
-      // Optional: customize the output file location
-      outputFile: 'src/router.tsx'
-    })
+    fileRouter(
+        pagesDir?: string; // OPTIONAL: Exemple src/app
+        outputFile?: string; 
+        importSource?: string;
+    ) // Defaults are perfect for web
   ]
 });
 ```
 
-2. **Set Up Your Router**
+2. **Set Up Router (src/main.tsx)**
 
-```tsx
+Use the `<BrowserRouter>` from react-router-dom.
+
+```typescript
 // src/main.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -62,40 +79,89 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 ```
 
+### For Other Environments (e.g., Tauri, React Native)
+
+For non-browser environments, tell the plugin to use the core react-router package and set up a `<MemoryRouter>`.
+
+1. **Configure Vite Plugin (vite.config.ts)**
+
+Use the `importSource` option to specify react-router.
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import fileRouter from 'react-router-file';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    fileRouter({
+      importSource: 'react-router'
+    })
+  ]
+});
+```
+
+2. **Set Up Router (src/main.tsx)**
+
+Use the `<MemoryRouter>` to provide the routing context.
+
+```typescript
+// src/main.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
+import { AppRoutes } from './router';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <MemoryRouter>
+      <AppRoutes />
+    </MemoryRouter>
+  </React.StrictMode>
+);
+```
+
 ## File-Based Routing
 
-Create pages in your `src/pages` directory and they'll automatically become routes:
+Create pages in your configured `pagesDir` (default: src/pages) and they'll automatically become routes:
 
 ```
 src/pages/
 ├── index.tsx         → /
 ├── about.tsx         → /about
-├── posts/
-│   ├── index.tsx     → /posts
-│   ├── [id].tsx      → /posts/:id
-│   └── [...slug].tsx → /posts/*
-└── settings.tsx      → /settings
+└── posts/
+    ├── index.tsx     → /posts
+    ├── [id].tsx      → /posts/:id
+    └── [...slug].tsx → /posts/*
 ```
 
-## Usage Examples
+## Usage
 
-### Basic Page Component
+### `<Link>` Component
 
-```tsx
-// src/pages/about.tsx
-export default function AboutPage() {
+To navigate between pages, use the `<Link>` component.
+
+```typescript
+import { Link } from 'react-router-file/runtime';
+
+function Navigation() {
   return (
-    <div>
-      <h1>About Us</h1>
-      <p>Welcome to our site!</p>
-    </div>
+    <nav>
+      <Link href="/">Home</Link>
+      <Link href="/about">About Us</Link>
+      <Link href="/posts/a-great-post">View Post</Link>
+    </nav>
   );
 }
 ```
 
-### Dynamic Route with Parameters
+### `useRouter()` Hook
 
-```tsx
+To access route information and navigation methods, use the `useRouter` hook.
+
+```typescript
 // src/pages/posts/[id].tsx
 import { useRouter } from 'react-router-file/runtime';
 
@@ -105,93 +171,65 @@ export default function PostPage() {
 
   return (
     <article>
-      <h1>Post {id}</h1>
+      <h1>Post ID: {id}</h1>
+      <button onClick={() => router.back()}>Go Back</button>
     </article>
   );
 }
 ```
 
-### Navigation
-
-```tsx
-// Using the Link component
-import { Link } from 'react-router-file/runtime';
-
-<Link href="/about">About Us</Link>
-
-// Using the router hook
-import { useRouter } from 'react-router-file/runtime';
-
-const router = useRouter();
-router.push('/posts/123');     // Navigate to a new page
-router.replace('/login');      // Replace current history entry
-router.back();                // Go back one page
-
-// Access route information
-console.log(router.pathname); // Current path
-console.log(router.params);   // Route parameters
-console.log(router.query);    // URL search params
-```
-
-## Plugin Options
-
-```ts
-interface PluginOptions {
-  // Directory where your page components are located
-  pagesDir?: string;          // default: 'src/pages'
-  
-  // Where to generate the router file
-  outputFile?: string;        // default: 'src/router.tsx'
-}
-```
-
-## How It Works
-
-The plugin:
-1. Watches your pages directory for changes
-2. Automatically generates routes based on file structure
-3. Creates a router configuration with code splitting
-4. Integrates seamlessly with Vite's dev server and build process
-
 ## API Reference
 
-### `<Link>`
-A wrapper around react-router-dom's Link component with a more intuitive API:
+### Plugin Options
 
-```tsx
+```typescript
+// vite.config.ts
+fileRouter({
+  // Directory where page components are located.
+  // Default: 'src/pages'
+  pagesDir?: string; 
+  
+  // Path where the generated router file will be saved.
+  // Default: 'src/router.tsx'
+  outputFile?: string; 
+
+  // The package to import <Routes> and <Route> from.
+  // Use 'react-router' for non-browser environments.
+  // Default: 'react-router-dom'
+  importSource?: string;
+})
+```
+
+### `<Link>`
+
+A wrapper around the router's Link component. It accepts all standard anchor tag attributes.
+
+```typescript
 import { Link } from 'react-router-file/runtime';
 
 <Link 
-  href="/about"           // Path to navigate to
+  href="/about"          // Path to navigate to
   replace={false}        // Optional: replace current history entry
-  state={{ from: '/' }} // Optional: pass state to the new route
-  className="nav-link"   // Optional: any props accepted by <a> tag
+  state={{ from: '/' }}  // Optional: pass state to the new route
+  className="nav-link"
 >
   About Us
 </Link>
 ```
 
 ### `useRouter()`
-A hook that provides routing utilities and route information:
 
-```ts
+A hook that provides routing utilities and information.
+
+```typescript
 const router = useRouter();
 
 // Properties
-router.pathname: string;           // Current path
-router.params: Record<string, string>; // Route parameters
-router.query: URLSearchParams;     // URL search parameters
+router.pathname: string;           // Current path, e.g., "/posts/123"
+router.params: Record<string, any>; // Route params, e.g., { id: "123" }
+router.query: URLSearchParams;      // URL search params object
 
 // Methods
-router.push(path: string): void;   // Navigate to a new page
+router.push(path: string): void;    // Navigate to a new page
 router.replace(path: string): void; // Replace current history entry
-router.back(): void;               // Go back one page
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-[MIT](LICENSE)
+router.back(): void;                // Go back one page
