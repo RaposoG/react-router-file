@@ -1,9 +1,7 @@
-// src/plugin.ts
 import type { Plugin, ResolvedConfig } from 'vite';
 import path from 'path';
 import { generateRoutes } from './generator.js';
 
-// 👇 1. ADICIONE A NOVA OPÇÃO AQUI
 export interface PluginOptions {
   pagesDir?: string;
   outputFile?: string;
@@ -22,7 +20,6 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
     ? path.resolve(process.cwd(), options.outputFile)
     : path.resolve(process.cwd(), 'src/router.tsx');
   
-  // 👇 2. DEFINA UM VALOR PADRÃO PARA A NOVA OPÇÃO
   const importSource = options.importSource || 'react-router-dom';
 
   return {

@@ -1,16 +1,13 @@
-// src/generator.ts
 import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
 
-// 👇 1. ADICIONE A NOVA OPÇÃO AQUI
 interface GeneratorOptions {
   pagesDir: string;
   outputFile: string;
-  importSource: string; // Recebe a nova opção
+  importSource: string; 
 }
 
-// ... (as funções lazyImport e formatRoutePath não mudam) ...
 const lazyImport = (componentName: string, filePath: string, outputFile: string) => {
   const relativePath = path.relative(path.dirname(outputFile), filePath).replace(/\\/g, '/');
   return `const ${componentName} = lazy(() => import('./${relativePath}'));`;
@@ -28,7 +25,6 @@ function formatRoutePath(filePath: string, pagesDir: string): string {
   return `/${routePath}`;
 }
 
-// 👇 2. RECEBA A OPÇÃO NOS PARÂMETROS DA FUNÇÃO
 export async function generateRoutes(options: GeneratorOptions) {
   const { pagesDir, outputFile, importSource } = options;
   console.log('🔄 [react-router-file] Generating routes ...');
