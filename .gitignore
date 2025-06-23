@@ -1,2 +1,9 @@
+# Ignore node_modules directory
 /node_modules
 /dist
+
+# Ignore locks
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+pnpm-workspace.yaml
