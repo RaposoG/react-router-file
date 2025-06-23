@@ -23,10 +23,6 @@ The library requires `react` and `react-router` as core peer dependencies. For w
 ```bash
 # For standard web projects
 npm install react-router-file react-router react-router-dom
-
-# For non-browser environments (like Tauri), react-router-dom is still
-# recommended for the <MemoryRouter>, but is technically optional.
-npm install react-router-file react-router react-router-dom
 ```
 
 ## Setup
