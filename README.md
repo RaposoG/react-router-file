@@ -1,6 +1,6 @@
-# vite-react-file-router
+# react-router-file
 
-[![npm version](https://badge.fury.io/js/vite-react-file-router.svg)](https://badge.fury.io/js/vite-react-file-router)
+[![npm version](https://badge.fury.io/js/react-router-file.svg)](https://badge.fury.io/js/react-router-file)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A zero-config file system router for Vite + React applications that brings Next.js-like routing experience. Create files in your `src/pages` directory and get automatic route generation with code splitting!
@@ -18,7 +18,7 @@ A zero-config file system router for Vite + React applications that brings Next.
 ## Installation
 
 ```bash
-npm install vite-react-file-router react-router-dom
+npm install react-router-file react-router-dom
 ```
 
 ## Setup
@@ -29,7 +29,7 @@ npm install vite-react-file-router react-router-dom
 // vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import fileRouter from 'vite-react-file-router';
+import fileRouter from 'react-router-file';
 
 export default defineConfig({
   plugins: [
@@ -97,7 +97,7 @@ export default function AboutPage() {
 
 ```tsx
 // src/pages/posts/[id].tsx
-import { useRouter } from 'vite-react-file-router/runtime';
+import { useRouter } from 'react-router-file/runtime';
 
 export default function PostPage() {
   const router = useRouter();
@@ -115,12 +115,12 @@ export default function PostPage() {
 
 ```tsx
 // Using the Link component
-import { Link } from 'vite-react-file-router/runtime';
+import { Link } from 'react-router-file/runtime';
 
 <Link href="/about">About Us</Link>
 
 // Using the router hook
-import { useRouter } from 'vite-react-file-router/runtime';
+import { useRouter } from 'react-router-file/runtime';
 
 const router = useRouter();
 router.push('/posts/123');     // Navigate to a new page
@@ -159,7 +159,7 @@ The plugin:
 A wrapper around react-router-dom's Link component with a more intuitive API:
 
 ```tsx
-import { Link } from 'vite-react-file-router/runtime';
+import { Link } from 'react-router-file/runtime';
 
 <Link 
   href="/about"           // Path to navigate to
