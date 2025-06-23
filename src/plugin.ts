@@ -7,7 +7,7 @@ import { generateRoutes } from './generator.js';
 export interface PluginOptions {
   pagesDir?: string;
   outputFile?: string;
-  importSource?: string; // De onde importar as rotas
+  importSource?: string;
 }
 
 export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
