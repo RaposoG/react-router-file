@@ -1,10 +1,24 @@
 {
   "name": "react-router-file",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "",
-  "main": "dist/runtime/index.js",
-  "module": "dist/runtime/index.js",
-  "types": "dist/runtime/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "runtime"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./runtime": {
+      "import": "./dist/runtime/index.js",
+      "types": "./dist/runtime/index.d.ts"
+    }
+  },
   "bin": {
     "generate-routes": "dist/scripts/generate-routes.js"
   },
@@ -49,7 +63,8 @@
   "peerDependencies": {
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-router-dom": "7.6.2"
+    "react-router-dom": "7.6.2",
+    "vite": "^6.3.5"
   },
   "dependencies": {
     "chokidar": "4.0.3",
