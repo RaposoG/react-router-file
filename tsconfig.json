@@ -3,15 +3,19 @@
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "node",
-    "jsx": "react-jsx", // Importante para o React 17+
-    "declaration": true, // ESSENCIAL: Gera os arquivos de definição de tipos (.d.ts)
+    "jsx": "react-jsx",
+    "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist", // Onde o JavaScript compilado será salvo
-    "rootDir": "./src", // Onde está nosso código fonte TypeScript
+    "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": [
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ],
     "forceConsistentCasingInFileNames": true,
     "lib": [
       "DOM",
@@ -19,8 +23,8 @@
     ]
   },
   "include": [
-    "src/**/*"
-  ], // Compilar apenas o que está na pasta src
+    "src"
+  ],
   "exclude": [
     "node_modules",
     "dist"
