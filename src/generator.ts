@@ -31,7 +31,7 @@ function formatRoutePath(filePath: string, pagesDir: string): string {
 // 👇 2. RECEBA A OPÇÃO NOS PARÂMETROS DA FUNÇÃO
 export async function generateRoutes(options: GeneratorOptions) {
   const { pagesDir, outputFile, importSource } = options;
-  console.log('🔄 [react-router-file] Gerando rotas...');
+  console.log('🔄 [react-router-file] Generating routes ...');
   
   const pageFiles = await glob('**/*.{tsx,jsx}', {
     cwd: pagesDir,
@@ -76,5 +76,5 @@ export const AppRoutes = () => (
 
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   fs.writeFileSync(outputFile, outputContent.trim());
-  console.log(`✅ [react-router-file] Rotas geradas com sucesso!`);
+  console.log(`✅ [react-router-file] Routes generated successfully!`);
 }
