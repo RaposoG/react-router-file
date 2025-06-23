@@ -1,10 +1,13 @@
+// src/plugin.ts
 import type { Plugin, ResolvedConfig } from 'vite';
 import path from 'path';
 import { generateRoutes } from './generator.js';
 
+// 👇 1. ADICIONE A NOVA OPÇÃO AQUI
 export interface PluginOptions {
   pagesDir?: string;
   outputFile?: string;
+  importSource?: string; // De onde importar as rotas
 }
 
 export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
@@ -18,9 +21,12 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
   const outputFile = options.outputFile
     ? path.resolve(process.cwd(), options.outputFile)
     : path.resolve(process.cwd(), 'src/router.tsx');
+  
+  // 👇 2. DEFINA UM VALOR PADRÃO PARA A NOVA OPÇÃO
+  const importSource = options.importSource || 'react-router-dom';
 
   return {
-    name: 'vite-react-file-router', 
+    name: 'vite-react-file-router',
 
     configResolved(resolvedConfig) {
       viteConfig = resolvedConfig;
@@ -28,7 +34,7 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
     },
 
     async buildStart() {
-      await generateRoutes({ pagesDir, outputFile });
+      await generateRoutes({ pagesDir, outputFile, importSource });
     },
 
     configureServer(server) {
@@ -36,7 +42,7 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
       
       const handleFileChange = async (file: string) => {
         if (file.startsWith(pagesDir)) {
-          await generateRoutes({ pagesDir, outputFile });
+          await generateRoutes({ pagesDir, outputFile, importSource });
         }
       };
       
