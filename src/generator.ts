@@ -1,3 +1,4 @@
+// src/generator.ts
 import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
@@ -12,22 +13,30 @@ const lazyImport = (componentName: string, filePath: string, outputFile: string)
   return `const ${componentName} = lazy(() => import('./${relativePath}'));`;
 };
 
+// 👇 FUNÇÃO CORRIGIDA 👇
 function formatRoutePath(filePath: string, pagesDir: string): string {
-    const relativePath = path.relative(pagesDir, filePath);
-    const routePath = relativePath
-      .replace(/\.(tsx|jsx)$/, '')
-      .replace(/\/index$/, '') // Mantém a barra para diretórios raiz
-      .replace(/\[\.\.\.([^\]]+)\]/g, '*')
-      .replace(/\[([^\]]+)\]/g, ':$1');
-  
-    return `/${routePath}`;
+  const relativePath = path.relative(pagesDir, filePath);
+
+  const routePath = relativePath
+    .replace(/\\/g, '/')
+    .replace(/\.(tsx|jsx)$/, '')
+    .replace(/\/index$/, '')
+    .replace(/^index$/, '')
+    .replace(/\[\.\.\.([^\]]+)\]/g, '*')
+    .replace(/\[([^\]]+)\]/g, ':$1');
+
+  return `/${routePath}`;
 }
+
 
 export async function generateRoutes(options: GeneratorOptions) {
   const { pagesDir, outputFile } = options;
   console.log('🔄 [vite-react-file-router] Gerando rotas...');
   
-  const pageFiles = await glob(`${pagesDir}/**/*.{tsx,jsx}`);
+  const pageFiles = await glob('**/*.{tsx,jsx}', {
+    cwd: pagesDir,
+    absolute: true,
+  });
 
   const imports: string[] = [];
   const routeElements: string[] = [];
@@ -54,7 +63,7 @@ import { Routes, Route } from 'react-router-dom';
 
 ${imports.join('\n')}
 
-const LoadingComponent = () => null; // Ou um spinner global
+const LoadingComponent = () => null;
 
 export const AppRoutes = () => (
   <Suspense fallback={<LoadingComponent />}>
