@@ -22,7 +22,7 @@ The library requires `react` and `react-router` as core peer dependencies. For w
 
 ```bash
 # For standard web projects
-npm install react-router-file react-router react-router-dom
+npm install react-router-file react-router
 ```
 
 ## Setup
