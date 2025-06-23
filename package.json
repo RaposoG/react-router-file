@@ -1,6 +1,6 @@
 {
   "name": "react-router-file",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "",
   "main": "dist/runtime/index.js",
   "module": "dist/runtime/index.js",
