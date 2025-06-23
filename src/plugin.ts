@@ -1,6 +1,6 @@
 import type { Plugin, ResolvedConfig } from 'vite';
 import path from 'path';
-import { generateRoutes } from './generator';
+import { generateRoutes } from './generator.js';
 
 export interface PluginOptions {
   pagesDir?: string;
