@@ -8,7 +8,6 @@ interface GeneratorOptions {
   importSource: string;
 }
 
-// --- Interfaces para a estrutura em árvore ---
 interface RouteFile {
   componentName: string;
   fullPath: string;
@@ -18,17 +17,15 @@ interface RouteFile {
 interface RouteNode {
   pathSegment: string;
   layout?: RouteFile;
-  pages: Map<string, RouteFile>; // path -> RouteFile
-  children: Map<string, RouteNode>; // segment -> RouteNode
+  pages: Map<string, RouteFile>;
+  children: Map<string, RouteNode>;
 }
 
-// Função auxiliar para gerar import lazy
 const lazyImport = (componentName: string, filePath: string, outputFile: string) => {
   const relativePath = path.relative(path.dirname(outputFile), filePath).replace(/\\/g, '/');
-  return `const ${componentName} = lazy(() => import('${relativePath}'));`;
+  return `const ${componentName} = lazy(() => import('./${relativePath}'));`;
 };
 
-// Função para formatar o caminho do arquivo para uma rota de URL
 function formatRoutePath(filePath: string, pagesDir: string): string {
   const relativePath = path.relative(pagesDir, filePath);
   return relativePath
@@ -40,53 +37,78 @@ function formatRoutePath(filePath: string, pagesDir: string): string {
     .replace(/\[([^\]]+)\]/g, ':$1');
 }
 
-// --- Nova função recursiva para gerar JSX a partir da árvore ---
-function generateRoutesFromNode(node: RouteNode, pagesDir: string): string[] {
-  const routes: string[] = [];
+// --- FUNÇÃO CORRIGIDA PARA USAR A SINTAXE DE ARQUIVO REAL ---
+function getPathPriority(pathSegment: string): number {
+  if (pathSegment.includes('[...')) return 3; 
+  if (pathSegment.includes('[')) return 2;   
+  if (pathSegment.startsWith('index.')) return 0;
+  return 1;
+}
 
-  // 1. Gera as rotas para as páginas neste nível
-  for (const [filePath, page] of node.pages.entries()) {
-    const routePath = formatRoutePath(filePath, pagesDir);
-    // Remove o caminho do pai, pois será aninhado
-    const parentRoutePath = formatRoutePath(path.dirname(filePath), pagesDir);
-    const relativeRoutePath = routePath.substring(parentRoutePath.length).replace(/^\//, '');
-
-    // Rotas de índice (index.tsx) são tratadas especialmente
-    if (path.basename(filePath).match(/^index\.(tsx|jsx)$/)) {
-      routes.push(`<Route index element={<${page.componentName} />} />`);
-    } else {
-      routes.push(`<Route path="${relativeRoutePath}" element={<${page.componentName} />} />`);
-    }
+function getNodeSpecificity(node: RouteNode): number {
+  let maxPriority = 0;
+  for (const page of node.pages.values()) {
+    const priority = getPathPriority(path.basename(page.fullPath));
+    if (priority > maxPriority) maxPriority = priority;
   }
-
-  // 2. Gera as rotas para os filhos
-  for (const childNode of node.children.values()) {
-    routes.push(...generateRoutesFromNode(childNode, pagesDir));
+  for (const child of node.children.values()) {
+    const childPriority = getNodeSpecificity(child);
+    if (childPriority > maxPriority) maxPriority = childPriority;
   }
-  
-  // Ordena para garantir que rotas específicas venham antes das dinâmicas e catch-all
-  routes.sort((a, b) => {
-    if (a.includes('*')) return 1;
-    if (b.includes('*')) return -1;
-    if (a.includes(':')) return 1;
-    if (b.includes(':')) return -1;
-    return b.length - a.length;
-  });
+  return maxPriority;
+}
 
-  // 3. Se houver um layout, envolve todas as rotas filhas
-  if (node.layout) {
-    const layoutPath = formatRoutePath(path.dirname(node.layout.fullPath), pagesDir) || '/';
-    // O layout raiz tem path="/", os outros são relativos
-    const routePathProp = layoutPath === '/' ? 'path="/" ' : '';
+function generateRoutesFromNode(node: RouteNode, isRoot: boolean): string[] {
+    const childNodes = Array.from(node.children.values());
+    const pageFiles = Array.from(node.pages.values());
+
+    childNodes.sort((a, b) => {
+        const priorityA = getNodeSpecificity(a);
+        const priorityB = getNodeSpecificity(b);
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return b.pathSegment.length - a.pathSegment.length;
+    });
     
-    return [
-      `<Route ${routePathProp}element={<${node.layout.componentName} />}>
-        ${routes.join('\n        ')}
-      </Route>`
-    ];
-  }
+    const pageRoutes = pageFiles
+        .sort((a, b) => {
+            const priorityA = getPathPriority(path.basename(a.fullPath));
+            const priorityB = getPathPriority(path.basename(b.fullPath));
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            return b.fullPath.length - a.fullPath.length;
+        })
+        .map(page => {
+            const isIndex = path.basename(page.fullPath).startsWith('index.');
+            if (isIndex) {
+                return `<Route index element={<${page.componentName} />} />`;
+            }
+            const pagePath = formatRoutePath(path.basename(page.fullPath), '');
+            return `<Route path="${pagePath}" element={<${page.componentName} />} />`;
+        });
 
-  return routes;
+    const childDirRoutes = childNodes.flatMap(child => generateRoutesFromNode(child, false));
+    const allChildRoutes = [...pageRoutes, ...childDirRoutes];
+
+    if (node.layout) {
+        const pathProp = isRoot ? 'path="/"' : `path="${node.pathSegment}"`;
+        return [
+        `<Route ${pathProp} element={<${node.layout.componentName} />}>
+            ${allChildRoutes.join('\n            ')}
+        </Route>`,
+        ];
+    }
+
+    if (!isRoot && allChildRoutes.length > 0) {
+        return [
+        `<Route path="${node.pathSegment}">
+            ${allChildRoutes.join('\n            ')}
+        </Route>`,
+        ];
+    }
+    return allChildRoutes;
 }
 
 
@@ -107,7 +129,6 @@ export async function generateRoutes(options: GeneratorOptions) {
   };
   let componentIndex = 0;
 
-  // Constrói a árvore de rotas
   for (const file of allFiles) {
     const componentName = `Page${componentIndex++}`;
     imports.push(lazyImport(componentName, file, outputFile));
@@ -117,21 +138,23 @@ export async function generateRoutes(options: GeneratorOptions) {
       fullPath: file,
       importStatement: lazyImport(componentName, file, outputFile),
     };
-    
+
     const isLayout = path.basename(file).startsWith('layout.');
     const dir = path.dirname(file);
-    const pathSegments = path.relative(pagesDir, dir).split(path.sep).filter(Boolean);
-    
+    const relativeDir = path.relative(pagesDir, dir);
+    const pathSegments = relativeDir.split(path.sep).filter(Boolean);
+
     let currentNode = rootNode;
     for (const segment of pathSegments) {
-      if (!currentNode.children.has(segment)) {
-        currentNode.children.set(segment, {
-          pathSegment: segment,
-          pages: new Map(),
-          children: new Map(),
-        });
-      }
-      currentNode = currentNode.children.get(segment)!;
+        const cleanSegment = formatRoutePath(segment, '');
+        if (!currentNode.children.has(cleanSegment)) {
+            currentNode.children.set(cleanSegment, {
+                pathSegment: cleanSegment,
+                pages: new Map(),
+                children: new Map(),
+            });
+        }
+        currentNode = currentNode.children.get(cleanSegment)!;
     }
 
     if (isLayout) {
@@ -140,9 +163,8 @@ export async function generateRoutes(options: GeneratorOptions) {
       currentNode.pages.set(file, routeFile);
     }
   }
-  
-  // Gera as strings de rota a partir da árvore
-  const routeElements = generateRoutesFromNode(rootNode, pagesDir);
+
+  const routeElements = generateRoutesFromNode(rootNode, true);
 
   const outputContent = `
 // ATTENTION: This file is automatically generated by react-router-file.
