@@ -27,7 +27,7 @@
     "prepublishOnly": "npm run build",
     "lint": "eslint 'src/**/*.ts*'",
     "format": "prettier --write 'src/**/*.ts*'",
-    "test": "vitest",
+    "test": "vitest -u",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage"
   },
