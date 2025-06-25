@@ -12,6 +12,8 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
   let viteConfig: ResolvedConfig;
   let isDev = false;
 
+  
+
   const pagesDir = options.pagesDir 
     ? path.resolve(process.cwd(), options.pagesDir) 
     : path.resolve(process.cwd(), 'src/pages');
@@ -23,18 +25,21 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
   const importSource = options.importSource || 'react-router-dom';
 
   return {
+    
     name: 'react-router-file',
 
     configResolved(resolvedConfig) {
       viteConfig = resolvedConfig;
       isDev = viteConfig.command === 'serve';
     },
+    
 
     async buildStart() {
       await generateRoutes({ pagesDir, outputFile, importSource });
     },
 
     configureServer(server) {
+      
       const watcher = server.watcher;
       
       const handleFileChange = async (file: string) => {
@@ -42,6 +47,7 @@ export function fileRouterPlugin(options: PluginOptions = {}): Plugin {
           await generateRoutes({ pagesDir, outputFile, importSource });
         }
       };
+      
       
       watcher.on('add', handleFileChange);
       watcher.on('unlink', handleFileChange);
