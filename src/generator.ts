@@ -5,57 +5,150 @@ import { glob } from 'glob';
 interface GeneratorOptions {
   pagesDir: string;
   outputFile: string;
-  importSource: string; 
+  importSource: string;
 }
 
+// --- Interfaces para a estrutura em árvore ---
+interface RouteFile {
+  componentName: string;
+  fullPath: string;
+  importStatement: string;
+}
+
+interface RouteNode {
+  pathSegment: string;
+  layout?: RouteFile;
+  pages: Map<string, RouteFile>; // path -> RouteFile
+  children: Map<string, RouteNode>; // segment -> RouteNode
+}
+
+// Função auxiliar para gerar import lazy
 const lazyImport = (componentName: string, filePath: string, outputFile: string) => {
   const relativePath = path.relative(path.dirname(outputFile), filePath).replace(/\\/g, '/');
-  return `const ${componentName} = lazy(() => import('./${relativePath}'));`;
+  return `const ${componentName} = lazy(() => import('${relativePath}'));`;
 };
 
+// Função para formatar o caminho do arquivo para uma rota de URL
 function formatRoutePath(filePath: string, pagesDir: string): string {
   const relativePath = path.relative(pagesDir, filePath);
-  const routePath = relativePath
+  return relativePath
     .replace(/\\/g, '/')
     .replace(/\.(tsx|jsx)$/, '')
     .replace(/\/index$/, '')
     .replace(/^index$/, '')
     .replace(/\[\.\.\.([^\]]+)\]/g, '*')
     .replace(/\[([^\]]+)\]/g, ':$1');
-  return `/${routePath}`;
 }
+
+// --- Nova função recursiva para gerar JSX a partir da árvore ---
+function generateRoutesFromNode(node: RouteNode, pagesDir: string): string[] {
+  const routes: string[] = [];
+
+  // 1. Gera as rotas para as páginas neste nível
+  for (const [filePath, page] of node.pages.entries()) {
+    const routePath = formatRoutePath(filePath, pagesDir);
+    // Remove o caminho do pai, pois será aninhado
+    const parentRoutePath = formatRoutePath(path.dirname(filePath), pagesDir);
+    const relativeRoutePath = routePath.substring(parentRoutePath.length).replace(/^\//, '');
+
+    // Rotas de índice (index.tsx) são tratadas especialmente
+    if (path.basename(filePath).match(/^index\.(tsx|jsx)$/)) {
+      routes.push(`<Route index element={<${page.componentName} />} />`);
+    } else {
+      routes.push(`<Route path="${relativeRoutePath}" element={<${page.componentName} />} />`);
+    }
+  }
+
+  // 2. Gera as rotas para os filhos
+  for (const childNode of node.children.values()) {
+    routes.push(...generateRoutesFromNode(childNode, pagesDir));
+  }
+  
+  // Ordena para garantir que rotas específicas venham antes das dinâmicas e catch-all
+  routes.sort((a, b) => {
+    if (a.includes('*')) return 1;
+    if (b.includes('*')) return -1;
+    if (a.includes(':')) return 1;
+    if (b.includes(':')) return -1;
+    return b.length - a.length;
+  });
+
+  // 3. Se houver um layout, envolve todas as rotas filhas
+  if (node.layout) {
+    const layoutPath = formatRoutePath(path.dirname(node.layout.fullPath), pagesDir) || '/';
+    // O layout raiz tem path="/", os outros são relativos
+    const routePathProp = layoutPath === '/' ? 'path="/" ' : '';
+    
+    return [
+      `<Route ${routePathProp}element={<${node.layout.componentName} />}>
+        ${routes.join('\n        ')}
+      </Route>`
+    ];
+  }
+
+  return routes;
+}
+
 
 export async function generateRoutes(options: GeneratorOptions) {
   const { pagesDir, outputFile, importSource } = options;
-  console.log('🔄 [react-router-file] Generating routes ...');
-  
-  const pageFiles = await glob('**/*.{tsx,jsx}', {
+  console.log('🔄 [react-router-file] Generating routes...');
+
+  const allFiles = await glob('**/*.{tsx,jsx}', {
     cwd: pagesDir,
     absolute: true,
   });
 
   const imports: string[] = [];
-  const routeElements: string[] = [];
+  const rootNode: RouteNode = {
+    pathSegment: '/',
+    pages: new Map(),
+    children: new Map(),
+  };
+  let componentIndex = 0;
 
-  pageFiles.forEach((file, index) => {
-    const componentName = `Page${index}`;
+  // Constrói a árvore de rotas
+  for (const file of allFiles) {
+    const componentName = `Page${componentIndex++}`;
     imports.push(lazyImport(componentName, file, outputFile));
-    routeElements.push(
-      `<Route path="${formatRoutePath(file, pagesDir)}" element={<${componentName} />} />`
-    );
-  });
+
+    const routeFile: RouteFile = {
+      componentName,
+      fullPath: file,
+      importStatement: lazyImport(componentName, file, outputFile),
+    };
+    
+    const isLayout = path.basename(file).startsWith('layout.');
+    const dir = path.dirname(file);
+    const pathSegments = path.relative(pagesDir, dir).split(path.sep).filter(Boolean);
+    
+    let currentNode = rootNode;
+    for (const segment of pathSegments) {
+      if (!currentNode.children.has(segment)) {
+        currentNode.children.set(segment, {
+          pathSegment: segment,
+          pages: new Map(),
+          children: new Map(),
+        });
+      }
+      currentNode = currentNode.children.get(segment)!;
+    }
+
+    if (isLayout) {
+      currentNode.layout = routeFile;
+    } else {
+      currentNode.pages.set(file, routeFile);
+    }
+  }
   
-  routeElements.sort((a, b) => {
-    if (a.includes('*')) return 1;
-    if (b.includes('*')) return -1;
-    return b.length - a.length;
-  });
+  // Gera as strings de rota a partir da árvore
+  const routeElements = generateRoutesFromNode(rootNode, pagesDir);
 
   const outputContent = `
 // ATTENTION: This file is automatically generated by react-router-file.
 // Do not edit manually.
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from '${importSource}';
+import { Routes, Route, Outlet } from '${importSource}';
 
 ${imports.join('\n')}
 
@@ -68,9 +161,9 @@ export const AppRoutes = () => (
     </Routes>
   </Suspense>
 );
-  `;
+  `.trim();
 
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
-  fs.writeFileSync(outputFile, outputContent.trim());
+  fs.writeFileSync(outputFile, outputContent);
   console.log(`✅ [react-router-file] Routes generated successfully!`);
 }
